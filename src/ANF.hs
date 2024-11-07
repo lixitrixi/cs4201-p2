@@ -1,6 +1,7 @@
 module ANF where
 
 import Defun
+import Data.List
 
 data ANFExpr
      = AVar Name
@@ -12,14 +13,17 @@ data ANFExpr
      | ABinOp Op Name Name
      | ACase Name [ACaseAlt]
 
-data ACaseAlt = AIfCon Name [Name] ANFExpr
+data ACaseAlt = AIfCon Name
+                       [Name]
+                       ANFExpr
 
-data ANFFunction = MkAFun { fnName :: Name,
-                            argNames :: [Name],
-                            definition :: ANFExpr }
+data ANFFunction = MkAFun Name
+                          [Name]
+                          ANFExpr
 
-data ANFProgram = MkProg { defs :: [ANFFunction],
-                           mainExpr :: ANFExpr }
+data ANFProgram = MkAProg
+                  [ANFFunction]
+                  ANFExpr
 
 -- Convert an input program to ANF, by converting an Expr to an ANFExpr
 -- Note that you will need another intermedaite step, converting an Expr
@@ -37,4 +41,5 @@ toJava p = anfToJava (progToANF p)
 -- All being well, this will print out a java program which, when compiled,
 -- will print the result of evaluating the expression in testProg1
 main :: IO ()
-main = putStrLn (toJava testProg1)
+-- main = putStrLn (toJava testProg1)
+main = print (defuncProg testProg6)
