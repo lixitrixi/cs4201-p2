@@ -1,17 +1,13 @@
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 public class Prog {
 
-    private class Unf {
+    static class Unf {
         String id; // Con identifier
-        List<Unf> fields; // Con fields
+        Unf[] fields; // Con fields
         Integer intval; // if int or bool
 
         public Unf(String id, Unf... a) {
             this.id = id;
-            this.fields = Arrays.asList(a);
+            this.fields = a;
         }
 
         public Unf(int n) {
@@ -31,9 +27,17 @@ public class Prog {
         public boolean asb() {
             return this.intval != 0;
         }
+
+        public String toString() {
+            switch (this.id) {
+                case "__int": return String.valueOf(this.asi());
+                case "__bool": return this.asb() ? "true" : "false";
+            }
+            return this.id + "(" + this.fields.toString() + ")";
+        }
     }
 
-    // Function declarations
+    // Generated function declarations
 %s
 
     public static void main(String[] args) {

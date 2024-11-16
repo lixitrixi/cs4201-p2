@@ -4,13 +4,15 @@ import Defun
 import ANF
 import Text.Printf
 import Data.List (group, sort, intercalate, intersperse)
-import Debug.Trace (trace)
 
 asgn :: Name -> String -> String
 asgn var val = var ++ " = " ++ val ++ ";"
 
 unf :: String -> String
 unf val = "new Unf(" ++ val ++ ")"
+
+nullVal :: String
+nullVal = unf "\"__null\""
 
 -- Given a var and an operator it is used in, call the correct value method
 operandAs :: Name -> Op -> String
@@ -22,12 +24,6 @@ tabs n = replicate (n * 4) ' '
 -- From user 'scvalex' on https://stackoverflow.com/questions/16108714/removing-duplicates-from-a-list-in-haskell-without-elem
 rmdups :: (Ord a) => [a] -> [a]
 rmdups = map head . group . sort
-
-anfToJava :: String -> ANFProgram -> String
-anfToJava template (MkAProg defs body) =
-         -- add empty line between functions and flatten into lines
-     let fns = intercalate "\n\n" (map funcToJava defs)
-     in printf template fns (exprToJava body)
 
 -- Turn an expression into a block of formatted Java code
 -- Declares and assigns "__ret" to the result of evaluation
@@ -67,7 +63,8 @@ exprToJava' ret (ACase c cases) =
      let casesANF = map (caseToJava ret) cases
          lns = concatMap fst casesANF -- body of switch block
          decls = concatMap snd casesANF
-         lns' = asgn "__con" c : ("switch (" ++ c ++ ".id) {") : lns ++ ["}"]
+         dflt = ["default:", asgn ret nullVal]
+         lns' = asgn "__con" c : ("switch (" ++ c ++ ".id) {") : lns ++ dflt ++ ["}"]
      in (lns', "__con" : decls)
 
 funcToJava :: ANFFunction -> String
@@ -79,16 +76,20 @@ funcToJava (MkAFun f args body) =
 caseToJava :: Name -> ACaseAlt -> ([String], [Name])
 caseToJava ret (AIfCon name fields body) =
      let (lns, decl) = exprToJava' ret body
-         extract (x, i :: Int) = asgn x ("__con.fields.get(" ++ show i ++ ")")
+         extract (x, i :: Int) = asgn x ("__con.fields[" ++ show i ++ "]")
          matches = zipWith (curry extract) fields [0..]
          lns' = ("case \"" ++ name ++ "\":") : matches ++ lns ++ ["break;"]
      in (lns', decl ++ fields)
 
+-- Compiles the given program into Java with the given template
+-- The template has two formattable sections for function definitions and the main program
+anfToJava :: String -> ANFProgram -> String
+anfToJava template (MkAProg defs body) =
+         -- add empty line between functions and flatten into lines
+     let fns = intercalate "\n\n" (map funcToJava defs)
+         lns = exprToJava body ++ "\n" ++ tabs 2 ++ "System.out.println(__ret);"
+     in printf template fns lns
+
 -- Defunctionalise, convert to ANF, and convert to Java
 toJava :: String -> Program -> String
 toJava template = anfToJava template . progToANF . defuncProg
-
-main :: IO ()
-main = do
-     template <- readFile "Prog.java"
-     putStrLn (toJava template testProg6)

@@ -32,11 +32,6 @@ data Expr
      | BinOp Op Expr Expr  -- x == y (only integer operations)
      | Case Expr [CaseAlt] -- case exp of { Nil() -> empty(); Cons(x, xs) -> nonempty(x, xs) }
     deriving (Show)
--- instance Show Expr where
---     show (Var x) = x
---     show (Val n) = show n
---     show (Let var val b) = "let " ++ var ++ " = (" ++ show val ++ ") in " ++ show b
---     show (Call f )
 
 data CaseAlt = IfCon Name -- constructor name
                      [Name] -- field names
@@ -64,7 +59,7 @@ defuncProg (MkProg funcs body) =
           (Case (Var "f") (genApplyAlt funcs))
      in MkProg (applyFun : map (defuncFunc funcs) funcs) (defuncExpr funcs body)
 
--- Defunctionalise an expression TODO
+-- Defunctionalise an expression given a list of declared functions
 defuncExpr :: [Function] -> Expr -> Expr
 defuncExpr fs (Var x) = Var x
 defuncExpr fs (Val n) = Val n
@@ -92,7 +87,7 @@ defuncCase fs (IfCon name fields a) = IfCon name fields
 defuncFunc :: [Function] -> Function -> Function
 defuncFunc fs (MkFun name args body) = MkFun name args (defuncExpr (rmFuncs fs args) body)
 
--- For each function TODO
+-- For each function, create a case for all its partial applications
 genApplyAlt :: [Function] -> [CaseAlt]
 genApplyAlt []       = []
 genApplyAlt (f : fs) =
@@ -112,7 +107,9 @@ rmFunc fs name = filter (\(MkFun f _ _) -> f /= name) fs
 rmFuncs :: [Function] -> [Name] -> [Function]
 rmFuncs = foldr (flip rmFunc)
 
--- TODO
+-- For a partial application to the given number of arguments,
+--   apply the function if we've reached its arity
+--   otherwise return the next largest partial application
 defuncCaseAlt :: Name -> Int -> Int -> CaseAlt
 defuncCaseAlt name ar n =
      let fields = map (\i -> "a" ++ show i) (take n [0..])
@@ -131,112 +128,3 @@ defuncCaseAlt name ar n =
 --   generate the corresponding function construct name
 defuncConName :: Name -> Int -> Name
 defuncConName name n = "__FN_" ++ show n ++ "_" ++ name
-
--- Function definitions, written as syntax trees
-
-{-
-double(val) = val * 2
--}
-double_def
-    = MkFun "double" ["val"]
-        (BinOp Times (Var "val") (Val 2))
-
-{-
-factorial(x) = if x == 0
-                  then 1
-                  else x * factorial(x-1)
--}
-factorial_def
-    = MkFun "factorial" ["x"]
-        (If (BinOp Eq (Var "x") (Val 0))
-            (Val 1)
-            (BinOp Times
-                   (Var "x")
-                   (Call (Var "factorial") [BinOp Minus (Var "x") (Val 1)])))
-
-{-
-fst(p) = case p of
-              MkPair(x,y) -> x
--}
-fst_def
-    = MkFun "fst" ["p"]
-        (Case (Var "p")
-             [IfCon "MkPair" ["x", "y"] (Var "x")])
-
-{-
-snd(p) = case p of
-              MkPair(x,y) -> y
--}
-snd_def
-    = MkFun "snd" ["p"]
-        (Case (Var "p")
-             [IfCon "MkPair" ["x", "y"] (Var "y")])
-
-{-
-add(x, y) = x + y
--}
-add_def
-    = MkFun "add" ["x", "y"]
-        (BinOp Plus (Var "x") (Var "y"))
-
-{-
-sum(xs) = case xs of
-               Nil -> 0
-               Cons(y, ys) -> y + sum(ys)
--}
-sum_def
-    = MkFun "sum" ["xs"]
-        (Case (Var "xs")
-              [IfCon "Nil" [] (Val 0),
-               IfCon "Cons" ["y", "ys"]
-                     (BinOp Plus (Var "y") (Call (Var "sum") [Var "ys"]))])
-
-{-
-testlist() = Cons 1 (Cons 2 Nil)
--}
-testlist_def
-    = MkFun "testlist" []
-        (Con "Cons" [Val 1, Con "Cons" [Val 2, Con "Nil" []]])
-
-{-
-map(f, xs) = case xs of
-                  Nil -> Nil
-                  Cons(y,ys) -> Cons(f(y), map(f,ys))
--}
-map_def
-    = MkFun "map" ["f", "xs"]
-        (Case (Var "xs")
-              [IfCon "Nil" [] (Con "Nil" []),
-               IfCon "Cons" ["y", "ys"]
-                     (Con "Cons" [Call (Var "f") [Var "y"],
-                                  Call (Var "map") [Var "f", Var "ys"]])])
-
-allDefs = [double_def, factorial_def, fst_def, snd_def, sum_def,
-           testlist_def, map_def, add_def]
-
-
--- Should evaluate to 6
-testProg1 = MkProg allDefs (Call (Var "double") [Val 3])
-
--- Should evaluate to 120
-testProg2 = MkProg allDefs (Call (Var "factorial") [Val 5])
-
--- Should evaluate to 1
-testProg3 = MkProg allDefs (Call (Var "fst") [Con "MkPair" [Val 1, Val 2]])
-
--- Should evaluate to 3
-testProg4 = MkProg allDefs (Call (Var "sum") [Var "testlist"])
-                      
--- Should evaluate to 6
-testProg5 = MkProg allDefs
-              (Call (Var "sum")
-                [Call (Var "map") [Var "double", Var "testlist"]])
-
--- Custom test programs
-
--- Should evaluate to 3
-testProg6 = MkProg allDefs (Call (Call (Var "add") [Val 1]) [Val 2])
-
-testProg7 = MkProg [] (Let "x" (BinOp Plus (Val 1) (BinOp Plus (Val 2) (Val 3))) (Var "x"))
-
-testProg8 = MkProg [] (Let "x" (BinOp Plus (BinOp Plus (Val 1) (Val 2)) (BinOp Plus (Val 3) (Val 4))) (BinOp Plus (Var "x") (Val 5)))

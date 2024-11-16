@@ -55,7 +55,7 @@ exprToANF t (BinOp op a b) =
      let aname = mname t
          bname = mname (t + 1)
      in ALet aname (exprToANF t a) (
-          ALet bname (exprToANF (t + 1) b) (ABinOp op aname bname)) -- TODO: why +1 not +2?
+          ALet bname (exprToANF (t + 1) b) (ABinOp op aname bname))
 
 exprToANF t (Call (Var f) args) =
      let k = ACall f
