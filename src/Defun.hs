@@ -1,9 +1,26 @@
 module Defun where
 
+import Data.List
+
 type Name = String
 
-data Op = Plus | Minus | Times | Divide | Eq | Lt | Gt
-    deriving (Show)
+data Op = Plus | Minus | Times | Divide | Eq | Lt | Gt | And | Or
+instance Show Op where
+    show Plus = "+"
+    show Minus = "-"
+    show Times = "*"
+    show Divide = "/"
+    show Eq = "=="
+    show Lt = "<"
+    show Gt = ">"
+    show And = "&&"
+    show Or = "||"
+
+-- "i" for ops that expect integers, "b" for booleans
+opType :: Op -> String
+opType And = "b"
+opType Or = "b"
+opType _ = "i"
 
 data Expr
      = Var Name
@@ -15,6 +32,11 @@ data Expr
      | BinOp Op Expr Expr  -- x == y (only integer operations)
      | Case Expr [CaseAlt] -- case exp of { Nil() -> empty(); Cons(x, xs) -> nonempty(x, xs) }
     deriving (Show)
+-- instance Show Expr where
+--     show (Var x) = x
+--     show (Val n) = show n
+--     show (Let var val b) = "let " ++ var ++ " = (" ++ show val ++ ") in " ++ show b
+--     show (Call f )
 
 data CaseAlt = IfCon Name -- constructor name
                      [Name] -- field names
@@ -32,7 +54,8 @@ data Program = MkProg [Function] -- all the function definitions
 
 -- Defunctionalisation helper functions
 
--- Defunctionalise a program TODO
+-- Defunctionalise a program by converting it to an equivalent form,
+-- where every function is applied to exactly the right number of arguments
 defuncProg :: Program -> Program
 defuncProg (MkProg funcs body) =
      let applyFun = MkFun
@@ -61,7 +84,7 @@ defuncExpr fs (Call (Var name) args) =
                     else wrapApply (Call (Var name) (take arity args)) (drop arity args) -- over-application
 defuncExpr fs (Call e args) = wrapApply (defuncExpr fs e) args -- we don't know the returned function
 
--- Since case statements define a local scope we need to avoid 
+-- Since case statements define a local scope we ignore any bound function names
 defuncCase :: [Function] -> CaseAlt -> CaseAlt
 defuncCase fs (IfCon name fields a) = IfCon name fields
      (defuncExpr (rmFuncs fs fields) a)
@@ -213,3 +236,7 @@ testProg5 = MkProg allDefs
 
 -- Should evaluate to 3
 testProg6 = MkProg allDefs (Call (Call (Var "add") [Val 1]) [Val 2])
+
+testProg7 = MkProg [] (Let "x" (BinOp Plus (Val 1) (BinOp Plus (Val 2) (Val 3))) (Var "x"))
+
+testProg8 = MkProg [] (Let "x" (BinOp Plus (BinOp Plus (Val 1) (Val 2)) (BinOp Plus (Val 3) (Val 4))) (BinOp Plus (Var "x") (Val 5)))
