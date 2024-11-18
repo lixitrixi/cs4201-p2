@@ -10,7 +10,7 @@ double(val) = val * 2
 -}
 -- CHANGED NAME: "double" is a reserved word in Java
 double_def
-    = MkFun "times2" ["val"]
+    = MkFun "double" ["val"]
         (BinOp Times (Var "val") (Val 2))
 
 {-
@@ -112,10 +112,10 @@ allDefs = [double_def, factorial_def, fst_def, snd_def, sum_def,
            testlist_def, map_def, add_def, naturals_def, concat_def]
 
 {-
-    times2(3)
+    double(3)
 -}
 -- Should evaluate to 6
-testProg1 = MkProg allDefs (Call (Var "times2") [Val 3])
+testProg1 = MkProg allDefs (Call (Var "double") [Val 3])
 
 {-
     factorial(5)
@@ -136,12 +136,12 @@ testProg3 = MkProg allDefs (Call (Var "fst") [Con "MkPair" [Val 1, Val 2]])
 testProg4 = MkProg allDefs (Call (Var "sum") [Var "testlist"])
 
 {-
-    sum(map times2(), testlist())
+    sum(map double(), testlist())
 -}
 -- Should evaluate to 6
 testProg5 = MkProg allDefs
                 (Call (Var "sum")
-                    [Call (Var "map") [Var "times2", Var "testlist"]])
+                    [Call (Var "map") [Var "double", Var "testlist"]])
 
 -- Custom test programs
 
@@ -176,12 +176,12 @@ testProg9 = MkProg [] (Let "x" (Val 5)
                             (Var "x")))
 
 {-
-    let con = Fn[times2()] -- holds a partially applied function
+    let con = Fn[double()] -- holds a partially applied function
     case con of
         Fn[f] -> f(2)
 -}
 -- Should evaluate to 4
-testProg10 = MkProg allDefs (Let "con" (Con "Fn" [Var "times2"])
+testProg10 = MkProg allDefs (Let "con" (Con "Fn" [Var "double"])
                                 (Case (Var "con") [IfCon "Fn" ["f"] (Call (Var "f") [Val 2])]))
 
 testProg :: String -> Program

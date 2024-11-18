@@ -54,7 +54,7 @@ data Program = MkProg [Function] -- all the function definitions
 defuncProg :: Program -> Program
 defuncProg (MkProg funcs body) =
      let applyFun = MkFun
-          "__APPLY" -- Compiler-reserved names begin with "__"
+          "$APPLY" -- Compiler-reserved names begin with "$"
           ["f", "arg"]
           (Case (Var "f") (genApplyAlt funcs))
      in MkProg (applyFun : map (defuncFunc funcs) funcs) (defuncExpr funcs body)
@@ -65,7 +65,7 @@ defuncExpr fs (Var x) =
      let decl = find (\(MkFun f _ _) -> f == x) fs
      in case decl of
           Nothing -> Var x
-          Just _ -> defuncExpr fs (Call (Var x) [])
+          Just _ -> defuncExpr fs (Call (Var x) []) -- handle different arity cases with defuncExpr
 defuncExpr fs (Val n) = Val n
 defuncExpr fs (Let name a b) =
      let fs' = rmFunc fs name
@@ -105,7 +105,7 @@ genApplyAlt (f : fs) =
      in alts ++ genApplyAlt fs
 
 wrapApply :: Expr -> [Expr] -> Expr
-wrapApply = foldl (\e x -> Call (Var "__APPLY") [e, x])
+wrapApply = foldl (\e x -> Call (Var "$APPLY") [e, x])
 
 -- Removes functions of the same name; used to remove local variables
 rmFunc :: [Function] -> Name -> [Function]
@@ -135,4 +135,30 @@ defuncCaseAlt name ar n =
 -- Given a function name and number of arguments given to it,
 --   generate the corresponding function construct name
 defuncConName :: Name -> Int -> Name
-defuncConName name n = "__FN_" ++ show n ++ "_" ++ name
+defuncConName name n = "$FN_" ++ show n ++ name
+
+{- Avoiding naming conflicts in user-defined names -}
+
+-- "$" is prepended to user names to avoid naming conflicts
+uname :: Name -> Name
+uname str = "__" ++ str
+
+renameProg :: Program -> Program
+renameProg (MkProg funcs body) = MkProg (map renameFunc funcs) (renameExpr body)
+
+renameExpr :: Expr -> Expr
+renameExpr (Var x) = Var (uname x)
+renameExpr (Val n) = Val n
+renameExpr (Let name a b) = Let (uname name) (renameExpr a) (renameExpr b)
+renameExpr (Call f args) = Call (renameExpr f) (map renameExpr args)
+renameExpr (Con name fields) = Con (uname name) (map renameExpr fields)
+renameExpr (If c a b) = If (renameExpr c) (renameExpr a) (renameExpr b)
+renameExpr (BinOp op a b) = BinOp op (renameExpr a) (renameExpr b)
+renameExpr (Case a cs) = Case (renameExpr a) (map renameCase cs)
+
+renameCase :: CaseAlt -> CaseAlt
+renameCase (IfCon name fields a) = IfCon (uname name) (map uname fields) (renameExpr a)
+
+renameFunc :: Function -> Function
+renameFunc (MkFun name args body) =
+     MkFun (uname name) (map uname args) (renameExpr body)

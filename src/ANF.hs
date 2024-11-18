@@ -85,4 +85,4 @@ wrapALet t (e : es) k =
 
 -- Machine name (compiler-defined)
 mname :: Int -> Name
-mname t = "__t" ++ show t
+mname t = "$t" ++ show t

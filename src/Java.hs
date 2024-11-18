@@ -12,7 +12,7 @@ unf :: String -> String
 unf val = "new Unf(" ++ val ++ ")"
 
 nullVal :: String
-nullVal = unf "\"__null\""
+nullVal = unf "\"$null\""
 
 -- Given a var and an operator it is used in, call the correct value method
 operandAs :: Name -> Op -> String
@@ -26,11 +26,11 @@ rmdups :: (Ord a) => [a] -> [a]
 rmdups = map head . group . sort
 
 -- Turn an expression into a block of formatted Java code
--- Declares and assigns "__ret" to the result of evaluation
+-- Declares and assigns "$ret" to the result of evaluation
 exprToJava :: ANFExpr -> String
 exprToJava e =
-     let (lns, decl) = exprToJava' "__ret" e -- assign expr result to reserved var
-         vars = "__ret" : rmdups decl -- to declare: unique vars and return var
+     let (lns, decl) = exprToJava' "$ret" e -- assign expr result to reserved var
+         vars = "$ret" : rmdups decl -- to declare: unique vars and return var
          lns' = ("Unf " ++ intercalate ", " vars ++ ";") : lns -- declare variables used in body
      in intercalate "\n" $ map (\l -> tabs 2 ++ l) lns'
 
@@ -64,19 +64,19 @@ exprToJava' ret (ACase c cases) =
          lns = concatMap fst casesANF -- body of switch block
          decls = concatMap snd casesANF
          dflt = ["default:", asgn ret nullVal]
-         lns' = asgn "__con" c : ("switch (" ++ c ++ ".id) {") : lns ++ dflt ++ ["}"]
-     in (lns', "__con" : decls)
+         lns' = asgn "$con" c : ("switch (" ++ c ++ ".id) {") : lns ++ dflt ++ ["}"]
+     in (lns', "$con" : decls)
 
 funcToJava :: ANFFunction -> String
 funcToJava (MkAFun f args body) =
      let arg_decl = intercalate ", " $ map ("Unf " ++) args -- add type signatures to func args
          hdr = tabs 1 ++ "public static Unf " ++ f ++ "(" ++ arg_decl ++ ") {"
-     in intercalate "\n" [hdr, exprToJava body, tabs 2 ++ "return __ret;", tabs 1 ++ "}"]
+     in intercalate "\n" [hdr, exprToJava body, tabs 2 ++ "return $ret;", tabs 1 ++ "}"]
 
 caseToJava :: Name -> ACaseAlt -> ([String], [Name])
 caseToJava ret (AIfCon name fields body) =
      let (lns, decl) = exprToJava' ret body
-         extract (x, i) = asgn x ("__con.fields[" ++ show i ++ "]")
+         extract (x, i) = asgn x ("$con.fields[" ++ show i ++ "]")
          matches = zipWith (curry extract) fields [0..]
          lns' = ("case \"" ++ name ++ "\":") : matches ++ lns ++ ["break;"]
      in (lns', decl ++ fields)
@@ -87,9 +87,9 @@ anfToJava :: String -> ANFProgram -> String
 anfToJava template (MkAProg defs body) =
          -- add empty line between functions and flatten into lines
      let fns = intercalate "\n\n" (map funcToJava defs)
-         lns = exprToJava body ++ "\n" ++ tabs 2 ++ "System.out.println(__ret);"
+         lns = exprToJava body ++ "\n" ++ tabs 2 ++ "System.out.println($ret);"
      in printf template fns lns
 
 -- Defunctionalise, convert to ANF, and convert to Java
 toJava :: String -> Program -> String
-toJava template = anfToJava template . progToANF . defuncProg
+toJava template = anfToJava template . progToANF . defuncProg . renameProg
