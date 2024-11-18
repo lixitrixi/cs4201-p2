@@ -20,20 +20,20 @@ public class Prog {
             this.intval = b ? 1 : 0;
         }
 
-        public int asi() {
+        public int toInt() {
             return this.intval;
         }
 
-        public boolean asb() {
+        public boolean toBool() {
             return this.intval != 0;
         }
 
         public String toString() {
             switch (this.id) {
-                case "__int": return String.valueOf(this.asi());
-                case "__bool": return this.asb() ? "true" : "false";
+                case "__int": return String.valueOf(this.toInt());
+                case "__bool": return this.toBool() ? "true" : "false";
             }
-            return this.id + "(" + this.fields.toString() + ")";
+            return this.id + java.util.Arrays.toString(this.fields);
         }
     }
 

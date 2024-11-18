@@ -16,7 +16,7 @@ nullVal = unf "\"__null\""
 
 -- Given a var and an operator it is used in, call the correct value method
 operandAs :: Name -> Op -> String
-operandAs x op = x ++ ".as" ++ opType op ++ "()"
+operandAs x op = x ++ castMethod op
 
 tabs :: Int -> String
 tabs n = replicate (n * 4) ' '
@@ -50,7 +50,7 @@ exprToJava' ret (ALet name val b) =
 exprToJava' ret (AIf c a b) =
      let (a_lns, a_decl) = exprToJava' ret a
          (b_lns, b_decl) = exprToJava' ret b
-         lns' = ("if (" ++ c ++ ".asb()) {") : a_lns ++ "} else {" : b_lns ++ ["}"]
+         lns' = ("if (" ++ c ++ ".toBool()) {") : a_lns ++ "} else {" : b_lns ++ ["}"]
      in (lns', a_decl ++ b_decl)
 exprToJava' ret (ACall f args) =
      let ln = asgn ret (f ++ "(" ++ intercalate ", " args ++ ")")
@@ -76,7 +76,7 @@ funcToJava (MkAFun f args body) =
 caseToJava :: Name -> ACaseAlt -> ([String], [Name])
 caseToJava ret (AIfCon name fields body) =
      let (lns, decl) = exprToJava' ret body
-         extract (x, i :: Int) = asgn x ("__con.fields[" ++ show i ++ "]")
+         extract (x, i) = asgn x ("__con.fields[" ++ show i ++ "]")
          matches = zipWith (curry extract) fields [0..]
          lns' = ("case \"" ++ name ++ "\":") : matches ++ lns ++ ["break;"]
      in (lns', decl ++ fields)

@@ -5,4 +5,4 @@ all:
 
 .PHONY: clean
 clean:
-	rm -rf Main **/*.o **/*.hi *.class Prog.java
+	rm -rf Main **/*.o **/*.hi *.class Prog.java src/Main

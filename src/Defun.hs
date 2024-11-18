@@ -16,11 +16,11 @@ instance Show Op where
     show And = "&&"
     show Or = "||"
 
--- "i" for ops that expect integers, "b" for booleans
-opType :: Op -> String
-opType And = "b"
-opType Or = "b"
-opType _ = "i"
+-- Return the correct conversion method for operands
+castMethod :: Op -> String
+castMethod And = ".toBool()"
+castMethod Or = ".toBool()"
+castMethod _ = ".toInt()"
 
 data Expr
      = Var Name
@@ -61,9 +61,15 @@ defuncProg (MkProg funcs body) =
 
 -- Defunctionalise an expression given a list of declared functions
 defuncExpr :: [Function] -> Expr -> Expr
-defuncExpr fs (Var x) = Var x
+defuncExpr fs (Var x) =
+     let decl = find (\(MkFun f _ _) -> f == x) fs
+     in case decl of
+          Nothing -> Var x
+          Just _ -> defuncExpr fs (Call (Var x) [])
 defuncExpr fs (Val n) = Val n
-defuncExpr fs (Let name a b) = Let name (defuncExpr fs a) (defuncExpr fs b)
+defuncExpr fs (Let name a b) =
+     let fs' = rmFunc fs name
+     in Let name (defuncExpr fs' a) (defuncExpr fs' b)
 defuncExpr fs (Con name args) = Con name (map (defuncExpr fs) args)
 defuncExpr fs (If c a b) = If (defuncExpr fs c) (defuncExpr fs a) (defuncExpr fs b)
 defuncExpr fs (BinOp op a b) = BinOp op (defuncExpr fs a) (defuncExpr fs b)
@@ -71,13 +77,15 @@ defuncExpr fs (Case a cs) = Case (defuncExpr fs a) (map (defuncCase fs) cs)
 
 defuncExpr fs (Call (Var name) args) = 
      let decl = find (\(MkFun f _ _) -> f == name) fs
+         args' = map (defuncExpr fs) args
      in case decl of
-          Nothing -> wrapApply (Var name) args -- local name
-          Just (MkFun _ dargs _) -> let arity = length dargs
-               in if length args < arity
-                    then Con (defuncConName name (length args)) args -- partial application
-                    else wrapApply (Call (Var name) (take arity args)) (drop arity args) -- over-application
-defuncExpr fs (Call e args) = wrapApply (defuncExpr fs e) args -- we don't know the returned function
+          Nothing -> wrapApply (Var name) args' -- local name
+          Just (MkFun _ dargs _) ->
+               let arity = length dargs
+               in if length args' < arity
+                    then Con (defuncConName name (length args')) args' -- partial application
+                    else wrapApply (Call (Var name) (take arity args')) (drop arity args') -- over-application
+defuncExpr fs (Call e args) = wrapApply (defuncExpr fs e) args -- we don't know the function being called
 
 -- Since case statements define a local scope we ignore any bound function names
 defuncCase :: [Function] -> CaseAlt -> CaseAlt
