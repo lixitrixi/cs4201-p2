@@ -61,7 +61,7 @@ exprToJava' ret (ACase c cases) =
          lns = concatMap fst casesANF -- body of switch block
          decls = concatMap snd casesANF
          dflt = ["default:",
-               "throw new RuntimeException(\"Unmatched constructor type '" ++ c ++ "'\");"]
+               "throw new RuntimeException(\"Unmatched constructor type: \" + $con.getTag());"]
          lns' = asgn "$con" c : ("switch (" ++ c ++ ".getTag()) {") : lns ++ dflt ++ ["}"]
      in (lns', "$con" : decls)
 

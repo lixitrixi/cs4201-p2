@@ -8,5 +8,5 @@ main :: IO ()
 main = do
      template <- readFile "src/template.java"
      args <- getArgs
-     let progName = head args
+     let progName = read (head args) :: Int
      putStr (toJava template $ testProg progName)

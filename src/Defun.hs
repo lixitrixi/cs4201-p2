@@ -144,7 +144,7 @@ defuncConName name n = "$FN_" ++ show n ++ name
 
 -- "$" is prepended to user names to avoid naming conflicts
 uname :: Name -> Name
-uname str = "__" ++ str
+uname str = "_" ++ str
 
 renameProg :: Program -> Program
 renameProg (MkProg funcs body) = MkProg (map renameFunc funcs) (renameExpr body)

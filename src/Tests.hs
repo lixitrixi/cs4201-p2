@@ -8,7 +8,6 @@ import Defun
 {-
 double(val) = val * 2
 -}
--- CHANGED NAME: "double" is a reserved word in Java
 double_def
     = MkFun "double" ["val"]
         (BinOp Times (Var "val") (Val 2))
@@ -111,35 +110,37 @@ concat_def
 allDefs = [double_def, factorial_def, fst_def, snd_def, sum_def,
            testlist_def, map_def, add_def, naturals_def, concat_def]
 
+testProg :: Int -> Program
+
 {-
     double(3)
 -}
 -- Should evaluate to 6
-testProg1 = MkProg allDefs (Call (Var "double") [Val 3])
+testProg 1 = MkProg allDefs (Call (Var "double") [Val 3])
 
 {-
     factorial(5)
 -}
 -- Should evaluate to 120
-testProg2 = MkProg allDefs (Call (Var "factorial") [Val 5])
+testProg 2 = MkProg allDefs (Call (Var "factorial") [Val 5])
 
 {-
     fst(MkPair[1, 2])
 -}
 -- Should evaluate to 1
-testProg3 = MkProg allDefs (Call (Var "fst") [Con "MkPair" [Val 1, Val 2]])
+testProg 3 = MkProg allDefs (Call (Var "fst") [Con "MkPair" [Val 1, Val 2]])
 
 {-
-    sum(testlist())
+    sum(testlist)
 -}
 -- Should evaluate to 3
-testProg4 = MkProg allDefs (Call (Var "sum") [Var "testlist"])
+testProg 4 = MkProg allDefs (Call (Var "sum") [Var "testlist"])
 
 {-
-    sum(map double(), testlist())
+    sum(map double, testlist)
 -}
 -- Should evaluate to 6
-testProg5 = MkProg allDefs
+testProg 5 = MkProg allDefs
                 (Call (Var "sum")
                     [Call (Var "map") [Var "double", Var "testlist"]])
 
@@ -149,20 +150,30 @@ testProg5 = MkProg allDefs
     (add(1))(2)
 -}
 -- Should evaluate to 3
-testProg6 = MkProg allDefs (Call (Call (Var "add") [Val 1]) [Val 2])
+testProg 6 = MkProg allDefs (Call (Call (Var "add") [Val 1]) [Val 2])
+
+{-
+    let x = add(3)
+    x(2)
+-}
+-- Should evaluate to 5
+testProg 7 = MkProg allDefs (Let "x" (Call (Var "add") [Val 3])
+                                (Call (Var "x") [Val 2]))
 
 {-
     let x = (1 + 2) + (3 + 4)
     x + 5
 -}
 -- Should evaluate to 15
-testProg7 = MkProg [] (Let "x" (BinOp Plus (BinOp Plus (Val 1) (Val 2)) (BinOp Plus (Val 3) (Val 4))) (BinOp Plus (Var "x") (Val 5)))
+testProg 8 = MkProg [] (Let "x" (BinOp Plus (BinOp Plus (Val 1) (Val 2))
+                                (BinOp Plus (Val 3) (Val 4)))
+                            (BinOp Plus (Var "x") (Val 5)))
 
 {-
     concat(naturals(2), naturals(3))
 -}
 -- Should evaluate to (prettified) [1, 2, 1, 2, 3]
-testProg8 = MkProg allDefs (Call (Var "concat") [Call (Var "naturals") [Val 2],
+testProg 9 = MkProg allDefs (Call (Var "concat") [Call (Var "naturals") [Val 2],
     Call (Var "naturals") [Val 3]])
 
 {-
@@ -171,7 +182,7 @@ testProg8 = MkProg allDefs (Call (Var "concat") [Call (Var "naturals") [Val 2],
     x
 -}
 -- Should evaluate to 10
-testProg9 = MkProg [] (Let "x" (Val 5)
+testProg 10 = MkProg [] (Let "x" (Val 5)
                         (Let "x" (BinOp Plus (Var "x") (Val 5))
                             (Var "x")))
 
@@ -181,19 +192,28 @@ testProg9 = MkProg [] (Let "x" (Val 5)
         Fn[f] -> f(2)
 -}
 -- Should evaluate to 4
-testProg10 = MkProg allDefs (Let "con" (Con "Fn" [Var "double"])
+testProg 11 = MkProg allDefs (Let "con" (Con "Fn" [Var "double"])
                                 (Case (Var "con") [IfCon "Fn" ["f"] (Call (Var "f") [Val 2])]))
 
-testProg :: String -> Program
-testProg "testProg1" = testProg1
-testProg "testProg2" = testProg2
-testProg "testProg3" = testProg3
-testProg "testProg4" = testProg4
-testProg "testProg5" = testProg5
-testProg "testProg6" = testProg6
-testProg "testProg7" = testProg7
-testProg "testProg8" = testProg8
-testProg "testProg9" = testProg9
-testProg "testProg10" = testProg10
+{-
+    let x = (
+        let x = 1
+        4
+    )
+    x
+-}
+-- Should evaluate to 4
+testProg 12 = MkProg allDefs (Let "x" (Let "x" (Val 1) (Val 4)) (Var "x"))
 
-testProg _ = error "Specified example program not found; see `src/Tests.hs`"
+{-
+    let x = Foo[1, 2]
+    case x of
+        Foo[x, y] -> x
+-}
+-- Should evaluate to 1
+testProg 13 = MkProg [] (Let "x" (Con "Foo" [Val 1, Val 2])
+                            (Case (Var "x") [
+                                IfCon "Fo" ["x", "y"] (Var "x") -- Shadow name of constructor
+                            ]))
+
+testProg _ = error "Specified example program not found! See `src/Tests.hs`"
