@@ -57,7 +57,10 @@ defuncProg (MkProg funcs body) =
           "$APPLY" -- Compiler-reserved names begin with "$"
           ["f", "arg"]
           (Case (Var "f") (genApplyAlt funcs))
-     in MkProg (applyFun : map (defuncFunc funcs) funcs) (defuncExpr funcs body)
+         funcs' = if not (null funcs) -- don't add the APPLY function if there are no functions
+                    then applyFun : map (defuncFunc funcs) funcs
+                    else map (defuncFunc funcs) funcs
+     in MkProg funcs' (defuncExpr funcs body)
 
 -- Defunctionalise an expression given a list of declared functions
 defuncExpr :: [Function] -> Expr -> Expr
@@ -75,7 +78,7 @@ defuncExpr fs (If c a b) = If (defuncExpr fs c) (defuncExpr fs a) (defuncExpr fs
 defuncExpr fs (BinOp op a b) = BinOp op (defuncExpr fs a) (defuncExpr fs b)
 defuncExpr fs (Case a cs) = Case (defuncExpr fs a) (map (defuncCase fs) cs)
 
-defuncExpr fs (Call (Var name) args) = 
+defuncExpr fs (Call (Var name) args) =
      let decl = find (\(MkFun f _ _) -> f == name) fs
          args' = map (defuncExpr fs) args
      in case decl of

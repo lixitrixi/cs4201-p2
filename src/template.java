@@ -1,22 +1,22 @@
 public class Prog {
 
     static class Unf {
-        String id; // Con identifier
-        Unf[] fields; // Con fields
-        Integer intval; // if int or bool
+        private String tag; // Con identifier
+        private Unf[] fields; // Con fields
+        private int intval; // if int or bool
 
-        public Unf(String id, Unf... a) {
-            this.id = id;
+        public Unf(String tag, Unf... a) {
+            this.tag = tag;
             this.fields = a;
         }
 
         public Unf(int n) {
-            this.id = "__int";
+            this.tag = "$int";
             this.intval = n;
         }
 
         public Unf(boolean b) {
-            this.id = "__bool";
+            this.tag = "$bool";
             this.intval = b ? 1 : 0;
         }
 
@@ -28,12 +28,20 @@ public class Prog {
             return this.intval != 0;
         }
 
+        public String getTag() {
+            return this.tag;
+        }
+
+        public Unf getArg(int i) {
+            return this.fields[i];
+        }
+
         public String toString() {
-            switch (this.id) {
-                case "__int": return String.valueOf(this.toInt());
-                case "__bool": return this.toBool() ? "true" : "false";
+            switch (this.tag) {
+                case "$int": return String.valueOf(this.toInt());
+                case "$bool": return this.toBool() ? "true" : "false";
             }
-            return this.id + java.util.Arrays.toString(this.fields);
+            return this.tag + java.util.Arrays.toString(this.fields);
         }
     }
 

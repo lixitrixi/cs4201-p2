@@ -11,9 +11,6 @@ asgn var val = var ++ " = " ++ val ++ ";"
 unf :: String -> String
 unf val = "new Unf(" ++ val ++ ")"
 
-nullVal :: String
-nullVal = unf "\"$null\""
-
 -- Given a var and an operator it is used in, call the correct value method
 operandAs :: Name -> Op -> String
 operandAs x op = x ++ castMethod op
@@ -63,8 +60,9 @@ exprToJava' ret (ACase c cases) =
      let casesANF = map (caseToJava ret) cases
          lns = concatMap fst casesANF -- body of switch block
          decls = concatMap snd casesANF
-         dflt = ["default:", asgn ret nullVal]
-         lns' = asgn "$con" c : ("switch (" ++ c ++ ".id) {") : lns ++ dflt ++ ["}"]
+         dflt = ["default:",
+               "throw new RuntimeException(\"Unmatched constructor type '" ++ c ++ "'\");"]
+         lns' = asgn "$con" c : ("switch (" ++ c ++ ".getTag()) {") : lns ++ dflt ++ ["}"]
      in (lns', "$con" : decls)
 
 funcToJava :: ANFFunction -> String
@@ -76,7 +74,7 @@ funcToJava (MkAFun f args body) =
 caseToJava :: Name -> ACaseAlt -> ([String], [Name])
 caseToJava ret (AIfCon name fields body) =
      let (lns, decl) = exprToJava' ret body
-         extract (x, i) = asgn x ("$con.fields[" ++ show i ++ "]")
+         extract (x, i) = asgn x ("$con.getArg(" ++ show i ++ ")")
          matches = zipWith (curry extract) fields [0..]
          lns' = ("case \"" ++ name ++ "\":") : matches ++ lns ++ ["break;"]
      in (lns', decl ++ fields)
