@@ -27,21 +27,21 @@ factorial_def
 
 {-
 fst(p) = case p of
-              MkPair[x,y] -> x
+              Pair[x,y] -> x
 -}
 fst_def
     = MkFun "fst" ["p"]
         (Case (Var "p")
-             [IfCon "MkPair" ["x", "y"] (Var "x")])
+             [IfCon "Pair" ["x", "y"] (Var "x")])
 
 {-
 snd(p) = case p of
-              MkPair[x,y] -> y
+              Pair[x,y] -> y
 -}
 snd_def
     = MkFun "snd" ["p"]
         (Case (Var "p")
-             [IfCon "MkPair" ["x", "y"] (Var "y")])
+             [IfCon "Pair" ["x", "y"] (Var "y")])
 
 {-
 add(x, y) = x + y
@@ -68,6 +68,11 @@ testlist() = Cons[1, Cons[2, Nil]]
 testlist_def
     = MkFun "testlist" []
         (Con "Cons" [Val 1, Con "Cons" [Val 2, Con "Nil" []]])
+
+{- Extended function definitions -}
+
+true_def = MkFun "true" [] (Val 1) -- Allows clarity in programs
+false_def = MkFun "false" [] (Val 0)
 
 {-
 naturals(n) = if n > 0
@@ -107,10 +112,54 @@ concat_def
              IfCon "Cons" ["x", "xs"]
                 (Con "Cons" [Var "x", Call (Var "concat") [(Var "xs"), (Var "bs")]])])
 
+{-
+    lt(a, b) = a < b
+-}
+lt_def
+    = MkFun "lt" ["a", "b"]
+        (BinOp Lt (Var "a") (Var "b"))
+
+{-
+    any(xs) case xs of
+                Nil -> false
+                Cons[x, xs] -> if x
+                    then true
+                    else any(xs)
+-}
+any_def
+    = MkFun "any" ["xs"]
+        (Case (Var "xs") [
+            IfCon "Nil" [] (Var "false"),
+            IfCon "Cons" ["x", "xs"]
+                (If (Var "x")
+                    (Var "true")
+                    (Call (Var "any") [Var "xs"]))
+        ])
+
+{-
+    all(xs) case xs of
+                Nil -> true
+                Cons[x, xs] -> if x
+                    then all(xs)
+                    else false
+-}
+all_def
+    = MkFun "all" ["xs"]
+        (Case (Var "xs") [
+            IfCon "Nil" [] (Var "true"),
+            IfCon "Cons" ["x", "xs"]
+                (If (Var "x")
+                    (Call (Var "all") [Var "xs"])
+                    (Var "false"))
+        ])
+
 allDefs = [double_def, factorial_def, fst_def, snd_def, sum_def,
-           testlist_def, map_def, add_def, naturals_def, concat_def]
+           testlist_def, map_def, add_def, naturals_def, concat_def,
+           true_def, false_def, lt_def, any_def, all_def]
 
 testProg :: Int -> Program
+
+{- Original given test programs -}
 
 {-
     double(3)
@@ -125,10 +174,10 @@ testProg 1 = MkProg allDefs (Call (Var "double") [Val 3])
 testProg 2 = MkProg allDefs (Call (Var "factorial") [Val 5])
 
 {-
-    fst(MkPair[1, 2])
+    fst(Pair[1, 2])
 -}
 -- Should evaluate to 1
-testProg 3 = MkProg allDefs (Call (Var "fst") [Con "MkPair" [Val 1, Val 2]])
+testProg 3 = MkProg allDefs (Call (Var "fst") [Con "Pair" [Val 1, Val 2]])
 
 {-
     sum(testlist)
@@ -144,7 +193,7 @@ testProg 5 = MkProg allDefs
                 (Call (Var "sum")
                     [Call (Var "map") [Var "double", Var "testlist"]])
 
--- Custom test programs
+-- Extended test programs
 
 {-
     (add(1))(2)
@@ -177,13 +226,13 @@ testProg 9 = MkProg allDefs (Call (Var "concat") [Call (Var "naturals") [Val 2],
     Call (Var "naturals") [Val 3]])
 
 {-
-    let x = 5
-    let x = x + 5
+    let x = 1
+    let x = x + 1
     x
 -}
--- Should evaluate to 10
-testProg 10 = MkProg [] (Let "x" (Val 5)
-                        (Let "x" (BinOp Plus (Var "x") (Val 5))
+-- Should evaluate to 2
+testProg 10 = MkProg [] (Let "x" (Val 1)
+                        (Let "x" (BinOp Plus (Var "x") (Val 1))
                             (Var "x")))
 
 {-
@@ -213,7 +262,78 @@ testProg 12 = MkProg allDefs (Let "x" (Let "x" (Val 1) (Val 4)) (Var "x"))
 -- Should evaluate to 1
 testProg 13 = MkProg [] (Let "x" (Con "Foo" [Val 1, Val 2])
                             (Case (Var "x") [
-                                IfCon "Fo" ["x", "y"] (Var "x") -- Shadow name of constructor
+                                IfCon "Foo" ["x", "y"] (Var "x") -- Shadow name of constructor
                             ]))
+
+{-
+    let x = add()
+    x(1, 2)
+-}
+-- Should evaluate to 3
+testProg 14 = MkProg allDefs (Let "x" (Var "add")
+                                (Call (Var "x") [Val 1, Val 2]))
+
+-- Write some new tests and expected values for interesting cases (as well as any you think are simply missing) and briefly explain what each is doing.
+
+{-
+    any([])
+-}
+-- Should evaluate to 0 (false)
+testProg 15 = MkProg allDefs (Call (Var "any") [Con "Nil" []])
+
+{-
+    any([false, false])
+-}
+-- Should evaluate to 0
+testProg 16 = MkProg allDefs (Call (Var "any") [Con "Cons" [Var "false", Con "Cons" [Var "false", Con "Nil" []]]])
+
+{-
+    any([false, true])
+-}
+-- Should evaluate to 1 (true)
+testProg 17 = MkProg allDefs (Call (Var "any") [Con "Cons" [Var "false", Con "Cons" [Var "true", Con "Nil" []]]])
+
+{-
+    all([])
+-}
+-- Should evaluate to 1
+testProg 18 = MkProg allDefs (Call (Var "all") [Con "Nil" []])
+
+{-
+    all([false, true])
+-}
+-- Should evaluate to 0
+testProg 19 = MkProg allDefs (Call (Var "all") [Con "Cons" [Var "false", Con "Cons" [Var "true", Con "Nil" []]]])
+
+{-
+    all([true, true])
+-}
+-- Should evaluate to 1
+testProg 20 = MkProg allDefs (Call (Var "all") [Con "Cons" [Var "true", Con "Cons" [Var "true", Con "Nil" []]]])
+
+{-
+    any(map(lt(5), naturals(4)))
+-}
+-- Should evaluate to 0 (false)
+testProg 21
+    = MkProg allDefs (Call (Var "any")
+        [Call (Var "map")
+            [Call (Var "lt") [Val 5],
+            Call (Var "naturals")
+                [Val 4]]])
+
+{-
+    any(map(gt(5), naturals(6)))
+-}
+-- Should evaluate to 1 (true)
+testProg 22
+    = MkProg allDefs (Call (Var "any")
+        [Call (Var "map")
+            [Call (Var "lt") [Val 5],
+            Call (Var "naturals")
+                [Val 6]]])
+
+
+
 
 testProg _ = error "Specified example program not found! See `src/Tests.hs`"

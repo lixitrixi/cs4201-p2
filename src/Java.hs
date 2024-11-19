@@ -22,12 +22,20 @@ tabs n = replicate (n * 4) ' '
 rmdups :: (Ord a) => [a] -> [a]
 rmdups = map head . group . sort
 
+-- Removes any values in the second list which are elements of the first list
+rmOcc :: Eq a => [a] -> [a] -> [a]
+rmOcc _ [] = []
+rmOcc m (x : xs) = if x `elem` m
+     then rmOcc m xs
+     else x : rmOcc m xs
+
 -- Turn an expression into a block of formatted Java code
 -- Declares and assigns "$ret" to the result of evaluation
-exprToJava :: ANFExpr -> String
-exprToJava e =
+-- Does not declare any variables in the given list of names
+exprToJava :: [Name] -> ANFExpr -> String
+exprToJava def e =
      let (lns, decl) = exprToJava' "$ret" e -- assign expr result to reserved var
-         vars = "$ret" : rmdups decl -- to declare: unique vars and return var
+         vars = rmOcc def ("$ret" : rmdups decl) -- to declare: unique vars and return var
          lns' = ("Unf " ++ intercalate ", " vars ++ ";") : lns -- declare variables used in body
      in intercalate "\n" $ map (\l -> tabs 2 ++ l) lns'
 
@@ -62,14 +70,14 @@ exprToJava' ret (ACase c cases) =
          decls = concatMap snd casesANF
          dflt = ["default:",
                "throw new RuntimeException(\"Unmatched constructor type: \" + $con.getTag());"]
-         lns' = asgn "$con" c : ("switch (" ++ c ++ ".getTag()) {") : lns ++ dflt ++ ["}"]
+         lns' = asgn "$con" c : "switch ($con.getTag()) {" : lns ++ dflt ++ ["}"]
      in (lns', "$con" : decls)
 
 funcToJava :: ANFFunction -> String
 funcToJava (MkAFun f args body) =
      let arg_decl = intercalate ", " $ map ("Unf " ++) args -- add type signatures to func args
          hdr = tabs 1 ++ "public static Unf " ++ f ++ "(" ++ arg_decl ++ ") {"
-     in intercalate "\n" [hdr, exprToJava body, tabs 2 ++ "return $ret;", tabs 1 ++ "}"]
+     in intercalate "\n" [hdr, exprToJava args body, tabs 2 ++ "return $ret;", tabs 1 ++ "}"]
 
 caseToJava :: Name -> ACaseAlt -> ([String], [Name])
 caseToJava ret (AIfCon name fields body) =
@@ -85,7 +93,7 @@ anfToJava :: String -> ANFProgram -> String
 anfToJava template (MkAProg defs body) =
          -- add empty line between functions and flatten into lines
      let fns = intercalate "\n\n" (map funcToJava defs)
-         lns = exprToJava body ++ "\n" ++ tabs 2 ++ "System.out.println($ret);"
+         lns = exprToJava [] body ++ "\n" ++ tabs 2 ++ "System.out.println($ret);"
      in printf template fns lns
 
 -- Defunctionalise, convert to ANF, and convert to Java
