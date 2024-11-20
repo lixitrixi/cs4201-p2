@@ -2,6 +2,7 @@ module Java where
 
 import Defun
 import ANF
+
 import Text.Printf
 import Data.List (group, sort, intercalate, intersperse)
 

@@ -71,8 +71,8 @@ testlist_def
 
 {- Extended function definitions -}
 
-true_def = MkFun "true" [] (Val 1) -- Allows clarity in programs
-false_def = MkFun "false" [] (Val 0)
+true_def = MkFun "true" [] (BinOp Eq (Val 1) (Val 1)) -- Allows clarity in programs
+false_def = MkFun "false" [] (BinOp Eq (Val 0) (Val 1))
 
 {-
 naturals(n) = if n > 0
@@ -153,9 +153,17 @@ all_def
                     (Var "false"))
         ])
 
+bigadd_def
+    = MkFun "bigadd" ["a", "b", "c", "d", "e"]
+        (BinOp Plus (Var "a") $
+            BinOp Plus (Var "b") $
+            BinOp Plus (Var "c") $
+            BinOp Plus (Var "d") $
+            (Var "e"))
+
 allDefs = [double_def, factorial_def, fst_def, snd_def, sum_def,
            testlist_def, map_def, add_def, naturals_def, concat_def,
-           true_def, false_def, lt_def, any_def, all_def]
+           true_def, false_def, lt_def, any_def, all_def, bigadd_def]
 
 testProg :: Int -> Program
 
@@ -333,7 +341,62 @@ testProg 22
             Call (Var "naturals")
                 [Val 6]]])
 
+{-
+    let x = (if true
+        then 1
+        else 2)
+    x
+-}
+-- Should evaluate to 1
+testProg 23
+    = MkProg allDefs (Let "x" (If (Var "true") (Val 1) (Val 2)) (Var "x"))
 
 
+{-
+    true /\ false
+-}
+-- Should evaluate to false
+testProg 24
+    = MkProg allDefs (BinOp And (Var "true") (Var "false"))
+
+{-
+    true \/ false
+-}
+-- Should evaluate to true
+testProg 25
+    = MkProg allDefs (BinOp Or (Var "true") (Var "false"))
+
+testProg 26
+    = MkProg allDefs (Call (Var "bigadd") [
+            Call (Var "sum") [Var "testlist"],
+            Val 3,
+            Call (Var "sum") [Call (Var "naturals") [Val 10]],
+            BinOp Times (Val 10) (Val 3),
+            If (Var "false") (Val 0) (
+                Let "a" (Val 1) (
+                    Let "b" (Val 1) (
+                        Let "c" (Val 1) (
+                            Let "d" (Val 1) (
+                                Call (Var "sum") [
+                                    Con "Cons" [
+                                        Var "a",
+                                        Con "Cons" [
+                                            Var "b",
+                                            Con "Cons" [
+                                                Var "c",
+                                                Con "Cons" [
+                                                    Var "d",
+                                                    Con "Nil" []
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            )
+                        )
+                    )
+                )
+            )
+        ])
 
 testProg _ = error "Specified example program not found! See `src/Tests.hs`"

@@ -65,7 +65,7 @@ defuncProg (MkProg funcs body) =
 -- Defunctionalise an expression given a list of declared functions
 defuncExpr :: [Function] -> Expr -> Expr
 defuncExpr fs (Var x) =
-     let decl = find (\(MkFun f _ _) -> f == x) fs
+     let decl = findFunc x fs
      in case decl of
           Nothing -> Var x
           Just _ -> defuncExpr fs (Call (Var x) []) -- handle different arity cases with defuncExpr
@@ -79,16 +79,19 @@ defuncExpr fs (BinOp op a b) = BinOp op (defuncExpr fs a) (defuncExpr fs b)
 defuncExpr fs (Case a cs) = Case (defuncExpr fs a) (map (defuncCase fs) cs)
 
 defuncExpr fs (Call (Var name) args) =
-     let decl = find (\(MkFun f _ _) -> f == name) fs
+     let decl = findFunc name fs
          args' = map (defuncExpr fs) args
      in case decl of
-          Nothing -> wrapApply (Var name) args' -- local name
+          Nothing -> wrapApply (Var name) args' -- local name (unknown arity); wrap in APPLYs for every arg
           Just (MkFun _ dargs _) ->
                let arity = length dargs
                in if length args' < arity
                     then Con (defuncConName name (length args')) args' -- partial application
                     else wrapApply (Call (Var name) (take arity args')) (drop arity args') -- over-application
 defuncExpr fs (Call e args) = wrapApply (defuncExpr fs e) args -- we don't know the function being called
+
+findFunc :: Name -> [Function] -> Maybe Function
+findFunc name = find (\(MkFun f _ _) -> f == name)
 
 -- Since case statements define a local scope we ignore any bound function names
 defuncCase :: [Function] -> CaseAlt -> CaseAlt
@@ -142,7 +145,7 @@ defuncConName name n = "$FN_" ++ show n ++ name
 
 {- Avoiding naming conflicts in user-defined names -}
 
--- "$" is prepended to user names to avoid naming conflicts
+-- "_" is prepended to user names to avoid naming conflicts
 uname :: Name -> Name
 uname str = "_" ++ str
 

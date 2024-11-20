@@ -4,11 +4,11 @@ Build the program with `make`, from the project directory.
 
 # Usage
 
-Various example programs (including the initial 6) are available in `src/Tests.hs`. You may select example programs to compile by passing their ID to the program. This will print the resulting Java code:
+Various example programs (including the initial 5) are available in `src/Tests.hs`. You may select example programs to compile by passing their ID to the program:
 
     src/Main 1
 
-A script is provided to automate compiling and executing a given example program, and prints the output to the terminal:
+A script is provided to automate compiling and executing a given example program, and print the output to the terminal:
 
     ./run.sh 1
     # output: 6
