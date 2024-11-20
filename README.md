@@ -13,6 +13,12 @@ A script is provided to automate compiling and executing a given example program
     ./run.sh 1
     # output: 6
 
-The `runall.sh` script compiles and runs all TODO test programs, comparing their outputs to the expected values in `expected.txt`:
+The `tests.sh` script compiles and runs all test programs up to and including the given ID, comparing their outputs to the expected values in `expected.txt`. There are 29 total test cases:
 
-    ./runall.sh TODO
+    ./tests.sh 29
+
+To interact directly with the compiler (e.g. to compile self-defined programs), use `ghci`:
+
+    cd src && ghci Main
+    > template <- readFile "template.java"
+    > toJava template $ testProg 1 -- or your own

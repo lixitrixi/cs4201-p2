@@ -39,7 +39,7 @@ exprToANF t (Var x) = AVar x
 exprToANF t (Val n) = AVal n
 exprToANF t (Let name a b) = ALet name (exprToANF t a) (exprToANF t b)
 
--- exprToANF t (If (Var x) a b) = AIf x (exprToANF t a) (exprToANF t b)
+exprToANF t (If (Var x) a b) = AIf x (exprToANF t a) (exprToANF t b)
 exprToANF t (If e a b) =
      let ename = mname t -- We don't mind later variables overwriting this let, as it's immediately consumed
      in ALet ename (exprToANF t e) (AIf ename (exprToANF t a) (exprToANF t b))
@@ -57,7 +57,7 @@ exprToANF t (Con name args) =
      let k = ACon name
      in wrapALet t args k
 
--- exprToANF t (Case (Var x) cases) = ACase x (map (caseToANF t) cases)
+exprToANF t (Case (Var x) cases) = ACase x (map (caseToANF t) cases)
 exprToANF t (Case e cases) =
      let ename = mname t
      in ALet ename (exprToANF t e) (ACase ename (map (caseToANF t) cases))
@@ -69,9 +69,9 @@ caseToANF t (IfCon name fields body) = AIfCon name fields (exprToANF t body)
 -- Pass the final list of names to the given continuation
 wrapALet :: Int -> [Expr] -> ([Name] -> ANFExpr) -> ANFExpr
 wrapALet t [] k             = k []
--- wrapALet t ((Var x) : es) k = wrapALet (t + 1) es (\names -> k (x : names))
+wrapALet t ((Var x) : es) k = wrapALet t es (\names -> k (x : names))
 wrapALet t (e : es) k =
-     let ename = mname t
+     let ename = mname t  -- generate a fresh variable
      in ALet ename (exprToANF t e) (wrapALet (t + 1) es (\names -> k (ename : names)))
 
 -- Machine name (compiler-defined)

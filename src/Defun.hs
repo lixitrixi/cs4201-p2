@@ -53,14 +53,16 @@ data Program = MkProg [Function] -- all the function definitions
 -- where every function is applied to exactly the right number of arguments
 defuncProg :: Program -> Program
 defuncProg (MkProg funcs body) =
-     let applyFun = MkFun
+     let cases = genApplyAlt funcs
+         applyFun = MkFun
           "$APPLY" -- Compiler-reserved names begin with "$"
           ["f", "arg"]
-          (Case (Var "f") (genApplyAlt funcs))
-         funcs' = if not (null funcs) -- don't add the APPLY function if there are no functions
-                    then applyFun : map (defuncFunc funcs) funcs
-                    else map (defuncFunc funcs) funcs
-     in MkProg funcs' (defuncExpr funcs body)
+          (Case (Var "f") cases)
+         funcs' = map (defuncFunc funcs) funcs
+         funcs'' = if not (null cases) -- don't add the APPLY function if the case would be empty
+                    then applyFun : funcs'
+                    else funcs'
+     in MkProg funcs'' (defuncExpr funcs body)
 
 -- Defunctionalise an expression given a list of declared functions
 defuncExpr :: [Function] -> Expr -> Expr
@@ -72,7 +74,7 @@ defuncExpr fs (Var x) =
 defuncExpr fs (Val n) = Val n
 defuncExpr fs (Let name a b) =
      let fs' = rmFunc fs name
-     in Let name (defuncExpr fs' a) (defuncExpr fs' b)
+     in Let name (defuncExpr fs a) (defuncExpr fs' b)
 defuncExpr fs (Con name args) = Con name (map (defuncExpr fs) args)
 defuncExpr fs (If c a b) = If (defuncExpr fs c) (defuncExpr fs a) (defuncExpr fs b)
 defuncExpr fs (BinOp op a b) = BinOp op (defuncExpr fs a) (defuncExpr fs b)

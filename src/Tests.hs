@@ -76,13 +76,13 @@ false_def = MkFun "false" [] (BinOp Eq (Val 0) (Val 1))
 
 {-
 naturals(n) = if n > 0
-                then concat(naturals(n-1), Cons[n, Nil])
+                then append(naturals(n-1), Cons[n, Nil])
                 else Nil
 -}
 naturals_def
     = MkFun "naturals" ["n"]
         (If (BinOp Gt (Var "n") (Val 0))
-            (Call (Var "concat") [
+            (Call (Var "append") [
                 Call (Var "naturals") [BinOp Minus (Var "n") (Val 1)],
                 Con "Cons" [Var "n", Con "Nil" []]])
             (Con "Nil" []))
@@ -101,16 +101,16 @@ map_def
                                   Call (Var "map") [Var "f", Var "ys"]])])
 
 {-
-    concat(as, bs) = case as of
+    append(as, bs) = case as of
                           Nil -> bs
-                          Cons[x, xs] -> Cons[x, concat(xs, bs)]
+                          Cons[x, xs] -> Cons[x, append(xs, bs)]
 -}
-concat_def
-    = MkFun "concat" ["as", "bs"]
+append_def
+    = MkFun "append" ["as", "bs"]
         (Case (Var "as")
             [IfCon "Nil" [] (Var "bs"),
              IfCon "Cons" ["x", "xs"]
-                (Con "Cons" [Var "x", Call (Var "concat") [(Var "xs"), (Var "bs")]])])
+                (Con "Cons" [Var "x", Call (Var "append") [(Var "xs"), (Var "bs")]])])
 
 {-
     lt(a, b) = a < b
@@ -161,9 +161,24 @@ bigadd_def
             BinOp Plus (Var "d") $
             (Var "e"))
 
+fstorsnd_def
+    = MkFun "fstorsnd" ["cond"]
+        (If (Var "cond")
+            (Var "fst")
+            (Var "snd"))
+
+length_def
+    = MkFun "length" ["list"]
+        (Case (Var "list") [
+            IfCon "Nil" [] (Val 0),
+            IfCon "Cons" ["x", "xs"]
+                (BinOp Plus (Val 1) (Call (Var "length") [Var "xs"]))
+        ])
+
 allDefs = [double_def, factorial_def, fst_def, snd_def, sum_def,
-           testlist_def, map_def, add_def, naturals_def, concat_def,
-           true_def, false_def, lt_def, any_def, all_def, bigadd_def]
+           testlist_def, map_def, add_def, naturals_def, append_def,
+           true_def, false_def, lt_def, any_def, all_def, bigadd_def,
+           fstorsnd_def, length_def]
 
 testProg :: Int -> Program
 
@@ -227,10 +242,10 @@ testProg 8 = MkProg [] (Let "x" (BinOp Plus (BinOp Plus (Val 1) (Val 2))
                             (BinOp Plus (Var "x") (Val 5)))
 
 {-
-    concat(naturals(2), naturals(3))
+    append(naturals(2), naturals(3))
 -}
 -- Should evaluate to (prettified) [1, 2, 1, 2, 3]
-testProg 9 = MkProg allDefs (Call (Var "concat") [Call (Var "naturals") [Val 2],
+testProg 9 = MkProg allDefs (Call (Var "append") [Call (Var "naturals") [Val 2],
     Call (Var "naturals") [Val 3]])
 
 {-
@@ -398,5 +413,29 @@ testProg 26
                 )
             )
         ])
+
+testProg 27 -- APPLY will be empty and could cause an "unreachable" error in switch blocks
+    = MkProg [testlist_def] (
+        Val 1
+    )
+
+{-
+    fstorsnd(true, Pair[1, 2]) -- overapplication
+-}
+-- Should evaluate to 1
+testProg 28
+    = MkProg allDefs (Call (Var "fstorsnd") [
+            Var "true",
+            Con "Pair" [Val 1, Val 2]
+        ])
+
+{-
+    length(naturals(100))
+-}
+-- Should evaluate to 100
+testProg 29
+    = MkProg allDefs (Call (Var "length") [
+        Call (Var "naturals") [Val 100]
+    ])
 
 testProg _ = error "Specified example program not found! See `src/Tests.hs`"

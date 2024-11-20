@@ -9,8 +9,8 @@ import Data.List (group, sort, intercalate, intersperse)
 asgn :: Name -> String -> String
 asgn var val = var ++ " = " ++ val ++ ";"
 
-unf :: String -> String
-unf val = "new Unf(" ++ val ++ ")"
+uni :: String -> String
+uni val = "new Uni(" ++ val ++ ")"
 
 -- Given a var and an operator it is used in, call the correct value method
 operandAs :: Name -> Op -> String
@@ -37,7 +37,7 @@ exprToJava :: [Name] -> ANFExpr -> String
 exprToJava def e =
      let (lns, decl) = exprToJava' "$ret" e -- assign expr result to reserved var
          vars = rmOcc def ("$ret" : rmdups decl) -- to declare: unique vars and return var
-         lns' = ("Unf " ++ intercalate ", " vars ++ ";") : lns -- declare variables used in body
+         lns' = ("Uni " ++ intercalate ", " vars ++ ";") : lns -- declare variables used in body
      in intercalate "\n" $ map (\l -> tabs 2 ++ l) lns'
 
 -- Transform the expression into lines of Java
@@ -45,9 +45,9 @@ exprToJava def e =
 -- Return a list of lines and all declared variables
 exprToJava' :: Name -> ANFExpr -> ([String], [Name])
 exprToJava' ret (AVar x) = ([asgn ret x], [])
-exprToJava' ret (AVal n) = ([asgn ret $ unf (show n)], [])
+exprToJava' ret (AVal n) = ([asgn ret $ uni (show n)], [])
 exprToJava' ret (ABinOp op a b) =
-     let ln = asgn ret $ unf $ unwords [operandAs a op, show op, operandAs b op]
+     let ln = asgn ret $ uni $ unwords [operandAs a op, show op, operandAs b op]
      in ([ln], [])
 exprToJava' ret (ALet name val b) =
      let (left_lns, left_decl) = exprToJava' name val
@@ -63,7 +63,7 @@ exprToJava' ret (ACall f args) =
      in ([ln], [])
 exprToJava' ret (ACon c fields) =
      let c' = "\"" ++ c ++ "\""
-         ln = asgn ret ("new Unf(" ++ intercalate ", " (c' : fields) ++ ")")
+         ln = asgn ret ("new Uni(" ++ intercalate ", " (c' : fields) ++ ")")
      in ([ln], [])
 exprToJava' ret (ACase c cases) =
      let casesANF = map (caseToJava ret) cases
@@ -76,8 +76,8 @@ exprToJava' ret (ACase c cases) =
 
 funcToJava :: ANFFunction -> String
 funcToJava (MkAFun f args body) =
-     let arg_decl = intercalate ", " $ map ("Unf " ++) args -- add type signatures to func args
-         hdr = tabs 1 ++ "public static Unf " ++ f ++ "(" ++ arg_decl ++ ") {"
+     let arg_decl = intercalate ", " $ map ("Uni " ++) args -- add type signatures to func args
+         hdr = tabs 1 ++ "public static Uni " ++ f ++ "(" ++ arg_decl ++ ") {"
      in intercalate "\n" [hdr, exprToJava args body, tabs 2 ++ "return $ret;", tabs 1 ++ "}"]
 
 caseToJava :: Name -> ACaseAlt -> ([String], [Name])

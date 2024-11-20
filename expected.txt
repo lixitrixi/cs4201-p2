@@ -24,3 +24,6 @@ true
 false
 true
 95
+1
+1
+100

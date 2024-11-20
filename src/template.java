@@ -1,21 +1,21 @@
 public class Prog {
 
-    static class Unf {
+    static class Uni {
         private String tag; // Con identifier
-        private Unf[] fields; // Con fields
+        private Uni[] fields; // Con fields
         private int intval; // if int or bool
 
-        public Unf(String tag, Unf... a) {
+        public Uni(String tag, Uni... a) {
             this.tag = tag;
             this.fields = a;
         }
 
-        public Unf(int n) {
+        public Uni(int n) {
             this.tag = "$int";
             this.intval = n;
         }
 
-        public Unf(boolean b) {
+        public Uni(boolean b) {
             this.tag = "$bool";
             this.intval = b ? 1 : 0;
         }
@@ -32,7 +32,7 @@ public class Prog {
             return this.tag;
         }
 
-        public Unf getArg(int i) {
+        public Uni getArg(int i) {
             return this.fields[i];
         }
 
