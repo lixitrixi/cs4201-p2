@@ -120,7 +120,7 @@ lt_def
         (BinOp Lt (Var "a") (Var "b"))
 
 {-
-    any(xs) case xs of
+    any(xs) = case xs of
                 Nil -> false
                 Cons[x, xs] -> if x
                     then true
@@ -137,7 +137,7 @@ any_def
         ])
 
 {-
-    all(xs) case xs of
+    all(xs) = case xs of
                 Nil -> true
                 Cons[x, xs] -> if x
                     then all(xs)
@@ -161,6 +161,11 @@ bigadd_def
             BinOp Plus (Var "d") $
             (Var "e"))
 
+{-
+fstorsnd(cont) = if cond
+    then fst()
+    else snd()
+-}
 fstorsnd_def
     = MkFun "fstorsnd" ["cond"]
         (If (Var "cond")
@@ -259,7 +264,7 @@ testProg 10 = MkProg [] (Let "x" (Val 1)
                             (Var "x")))
 
 {-
-    let con = Fn[double()] -- holds a partially applied function
+    let con = Fn[double()] # holds a partially applied function
     case con of
         Fn[f] -> f(2)
 -}
@@ -381,6 +386,22 @@ testProg 24
 testProg 25
     = MkProg allDefs (BinOp Or (Var "true") (Var "false"))
 
+{-
+    bigadd(
+        sum(testlist),
+        3,
+        sum(naturals(10)),
+        10 * 3,
+        if false
+            then 0
+            else a = 1
+                 b = 1
+                 c = 1
+                 d = 1
+                 sum([a, b, c, d])
+    )
+-}
+-- Should evaluate to 95
 testProg 26
     = MkProg allDefs (Call (Var "bigadd") [
             Call (Var "sum") [Var "testlist"],
@@ -437,5 +458,12 @@ testProg 29
     = MkProg allDefs (Call (Var "length") [
         Call (Var "naturals") [Val 100]
     ])
+
+{-
+    (1 == 1) + 1
+-}
+-- Evaluates to 2 (technically invalid, but works because of the Uni type!)
+testProg 30
+    = MkProg [] (BinOp Plus (BinOp Eq (Val 1) (Val 1)) (Val 1))
 
 testProg _ = error "Specified example program not found! See `src/Tests.hs`"

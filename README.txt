@@ -13,9 +13,9 @@ A script is provided to automate compiling and executing a given example program
     ./run.sh 1
     # output: 6
 
-The `tests.sh` script compiles and runs all test programs up to and including the given ID, comparing their outputs to the expected values in `expected.txt`. There are 29 total test cases:
+The `tests.sh` script compiles and runs all test programs up to and including the given ID, comparing their outputs to the expected values in `expected.txt`. There are 30 total test cases:
 
-    ./tests.sh 29
+    ./tests.sh 30
 
 To interact directly with the compiler (e.g. to compile self-defined programs), use `ghci`:
 
